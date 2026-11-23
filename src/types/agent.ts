@@ -7,8 +7,8 @@ export interface Repository {
 }
 
 export type AgentNode =
-  | "planner"
   | "retriever"
+  | "planner"
   | "coding"
   | "testing"
   | "reflection"
@@ -41,12 +41,14 @@ export interface AgentStreamEvent {
   node: AgentNode;
   state_update?: AgentStateUpdate;
   status?: string;
+  error?: string;
 }
 
 export interface AgentRunPayload {
   repo_id: number;
   repo_path?: string;
   task: string;
+  issue_number?: number;
 }
 
 export interface AgentRunState {
