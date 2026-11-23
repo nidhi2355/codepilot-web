@@ -1,3 +1,11 @@
+export interface Repository {
+  id: number;
+  github_url: string;
+  name: string;
+  status: string;
+  created_at: string;
+}
+
 export type AgentNode =
   | "planner"
   | "retriever"
@@ -37,7 +45,7 @@ export interface AgentStreamEvent {
 
 export interface AgentRunPayload {
   repo_id: number;
-  repo_path: string;
+  repo_path?: string;
   task: string;
 }
 
