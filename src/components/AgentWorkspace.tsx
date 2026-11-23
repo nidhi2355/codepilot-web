@@ -5,8 +5,8 @@ import { useAgentStream } from "@/hooks/useAgentStream";
 import { AgentNode, Repository } from "@/types/agent";
 
 const PIPELINE: { id: AgentNode; label: string }[] = [
-  { id: "planner", label: "Planner" },
   { id: "retriever", label: "Retriever" },
+  { id: "planner", label: "Planner" },
   { id: "coding", label: "Coding" },
   { id: "testing", label: "Testing" },
   { id: "pr_creator", label: "PR Creator" },
