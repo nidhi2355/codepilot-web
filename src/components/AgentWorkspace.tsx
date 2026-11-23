@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useAgentStream } from "@/hooks/useAgentStream";
-import { AgentNode } from "@/types/agent";
+import { AgentNode, Repository } from "@/types/agent";
 
 const PIPELINE: { id: AgentNode; label: string }[] = [
   { id: "planner", label: "Planner" },
@@ -12,20 +12,113 @@ const PIPELINE: { id: AgentNode; label: string }[] = [
   { id: "pr_creator", label: "PR Creator" },
 ];
 
+const IN_PROGRESS_STATUSES = new Set([
+  "pending",
+  "cloned",
+  "indexing",
+  "embedding",
+]);
+
 export default function AgentWorkspace() {
   const { state, runAgent, stopAgent, reset } = useAgentStream();
-  const [repoId, setRepoId] = useState("1");
-  const [repoPath, setRepoPath] = useState("/tmp/railway_test");
-  const [task, setTask] = useState(
-    'Create ping.py with a function ping() that returns "pong", and test_ping.py using pytest to assert ping() == "pong".'
-  );
+  const [repos, setRepos] = useState<Repository[]>([]);
+  const [selectedRepoId, setSelectedRepoId] = useState<number | "">("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [ingesting, setIngesting] = useState(false);
+  const [repoError, setRepoError] = useState<string | null>(null);
+  const [task, setTask] = useState("");
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  const loadRepos = useCallback(async () => {
+    if (!apiUrl) return null;
+    const res = await fetch(`${apiUrl}/repositories/`);
+    if (!res.ok) throw new Error(`Failed to load repositories (${res.status})`);
+    return (await res.json()) as Repository[];
+  }, [apiUrl]);
+
+  const syncRepos = useCallback((data: Repository[]) => {
+    setRepos(data);
+    setSelectedRepoId((prev) => {
+      if (prev !== "" && data.some((r) => r.id === prev)) return prev;
+      const firstReady = data.find((r) => r.status === "ready");
+      return firstReady ? firstReady.id : data[0]?.id ?? "";
+    });
+  }, []);
+
+  const fetchRepos = useCallback(async () => {
+    try {
+      const data = await loadRepos();
+      if (data) syncRepos(data);
+    } catch (err) {
+      setRepoError((err as Error).message);
+    }
+  }, [loadRepos, syncRepos]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInitialRepos = async () => {
+      try {
+        const data = await loadRepos();
+        if (!cancelled && data) syncRepos(data);
+      } catch (err) {
+        if (!cancelled) setRepoError((err as Error).message);
+      }
+    };
+
+    void loadInitialRepos();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadRepos, syncRepos]);
+
+  // Poll every 3s while any repository is still ingesting
+  useEffect(() => {
+    const hasPending = repos.some((r) => IN_PROGRESS_STATUSES.has(r.status));
+    if (!hasPending) return;
+    const id = setInterval(fetchRepos, 3000);
+    return () => clearInterval(id);
+  }, [repos, fetchRepos]);
+
+  const handleIngest = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!githubUrl.trim() || !apiUrl || ingesting) return;
+    setIngesting(true);
+    setRepoError(null);
+    try {
+      const res = await fetch(`${apiUrl}/repositories/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ github_url: githubUrl.trim() }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.message || errBody.detail || `Failed (${res.status})`);
+      }
+      const created: Repository = await res.json();
+      setGithubUrl("");
+      setSelectedRepoId(created.id);
+      await fetchRepos();
+    } catch (err) {
+      setRepoError((err as Error).message);
+    } finally {
+      setIngesting(false);
+    }
+  };
+
+  const selectedRepo = repos.find((r) => r.id === selectedRepoId);
+  const canRun =
+    !state.isRunning &&
+    !!selectedRepo &&
+    selectedRepo.status === "ready" &&
+    !!task.trim();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!task.trim() || state.isRunning) return;
+    if (!canRun || !selectedRepo) return;
     runAgent({
-      repo_id: Number(repoId) || 1,
-      repo_path: repoPath.trim(),
+      repo_id: selectedRepo.id,
       task: task.trim(),
     });
   };
@@ -46,33 +139,70 @@ export default function AgentWorkspace() {
         </header>
 
         <form
+          onSubmit={handleIngest}
+          className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3"
+        >
+          <label className="block text-xs font-medium uppercase tracking-wider text-zinc-400">
+            Connect GitHub Repository
+          </label>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="url"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder="https://github.com/owner/repository"
+              disabled={ingesting}
+              className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={ingesting || !githubUrl.trim()}
+              className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {ingesting ? "Ingesting..." : "Ingest Repo"}
+            </button>
+          </div>
+          {repoError && <p className="text-xs text-red-400">{repoError}</p>}
+        </form>
+
+        <form
           onSubmit={handleSubmit}
           className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5"
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-400">
-                Repository ID
-              </label>
-              <input
-                type="number"
-                value={repoId}
-                onChange={(e) => setRepoId(e.target.value)}
-                disabled={state.isRunning}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-zinc-400">
-                Repository Path
-              </label>
-              <input
-                type="text"
-                value={repoPath}
-                onChange={(e) => setRepoPath(e.target.value)}
-                disabled={state.isRunning}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
-              />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-400">
+              Target Repository
+            </label>
+            <div className="flex items-center gap-3">
+              <select
+                value={selectedRepoId}
+                onChange={(e) => setSelectedRepoId(Number(e.target.value))}
+                disabled={state.isRunning || repos.length === 0}
+                className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+              >
+                {repos.length === 0 ? (
+                  <option value="">No repositories ingested yet</option>
+                ) : (
+                  repos.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} — {r.status}
+                    </option>
+                  ))
+                )}
+              </select>
+              {selectedRepo && (
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium uppercase ${
+                    selectedRepo.status === "ready"
+                      ? "bg-emerald-950 text-emerald-300"
+                      : selectedRepo.status === "error"
+                      ? "bg-red-950 text-red-300"
+                      : "bg-amber-950 text-amber-300"
+                  }`}
+                >
+                  {selectedRepo.status}
+                </span>
+              )}
             </div>
           </div>
 
@@ -85,7 +215,7 @@ export default function AgentWorkspace() {
               value={task}
               onChange={(e) => setTask(e.target.value)}
               disabled={state.isRunning}
-              placeholder="Describe the feature or bug fix..."
+              placeholder="Describe the feature or bug fix for the selected repository..."
               className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
             />
           </div>
@@ -93,7 +223,7 @@ export default function AgentWorkspace() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              disabled={state.isRunning || !task.trim()}
+              disabled={!canRun}
               className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {state.isRunning ? "Running..." : "Run Agent"}
