@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CodePilot — Autonomous AI Software Engineer",
+  title: "CodePilot — From Issue to Pull Request",
   description:
-    "Repository-grounded planning, autonomous code generation, automated pytest verification, and GitHub pull request creation.",
+    "Describe any GitHub issue—CodePilot indexes your codebase, writes the fix, verifies it with pytest, and opens a clean pull request.",
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} bg-zinc-950 text-zinc-100 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} bg-zinc-950 text-zinc-100 antialiased selection:bg-emerald-400/20 selection:text-emerald-200`}
       >
         {children}
       </body>
