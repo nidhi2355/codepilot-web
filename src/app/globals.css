@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0B0E14;
+  --surface-1: #121722;
+  --surface-2: #1A2130;
+  --border: #263045;
+  --text: #E6EAF2;
+  --text-muted: #9AA6BB;
+  --text-faint: #6B778C;
+  --brand: #2DD4BF;
+  --running: #60A5FA;
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --danger: #F87171;
+  --idle: #64748B;
+
+  /* Semantic subtle tints (10% fill / 30% border) */
+  --brand-tint: rgba(45, 212, 191, 0.10);
+  --brand-border: rgba(45, 212, 191, 0.30);
+  --running-tint: rgba(96, 165, 250, 0.10);
+  --running-border: rgba(96, 165, 250, 0.30);
+  --success-tint: rgba(74, 222, 128, 0.10);
+  --success-border: rgba(74, 222, 128, 0.30);
+  --warning-tint: rgba(251, 191, 36, 0.10);
+  --warning-border: rgba(251, 191, 36, 0.30);
+  --danger-tint: rgba(248, 113, 113, 0.10);
+  --danger-border: rgba(248, 113, 113, 0.30);
+  --idle-tint: rgba(100, 116, 139, 0.10);
+  --idle-border: rgba(100, 116, 139, 0.30);
+
+  --grid-line: rgba(255, 255, 255, 0.03);
+  --logo-glow: rgba(45, 212, 191, 0.12);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="light"] {
+  --bg: #F4F6FA;
+  --surface-1: #FFFFFF;
+  --surface-2: #EEF2F7;
+  --border: #D5DCE8;
+  --text: #0F172A;
+  --text-muted: #475569;
+  --text-faint: #64748B;
+  --brand: #0D9488;
+  --running: #2563EB;
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --idle: #64748B;
+
+  --brand-tint: rgba(13, 148, 136, 0.10);
+  --brand-border: rgba(13, 148, 136, 0.30);
+  --running-tint: rgba(37, 99, 235, 0.10);
+  --running-border: rgba(37, 99, 235, 0.30);
+  --success-tint: rgba(22, 163, 74, 0.10);
+  --success-border: rgba(22, 163, 74, 0.30);
+  --warning-tint: rgba(217, 119, 6, 0.10);
+  --warning-border: rgba(217, 119, 6, 0.30);
+  --danger-tint: rgba(220, 38, 38, 0.10);
+  --danger-border: rgba(220, 38, 38, 0.30);
+  --idle-tint: rgba(100, 116, 139, 0.10);
+  --idle-border: rgba(100, 116, 139, 0.30);
+
+  --grid-line: rgba(15, 23, 42, 0.03);
+  --logo-glow: rgba(13, 148, 136, 0.10);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+html,
+body {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Subtle 3% architectural grid */
+.cp-grid-bg {
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Indeterminate banner progress bar */
+@keyframes cp-progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.cp-progress-bar {
+  animation: cp-progress-slide 1.8s ease-in-out infinite;
+}
+
+/* Clean custom scrollbars for textarea & terminal */
+.cp-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cp-scrollbar::-webkit-scrollbar-track {
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+.cp-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
+
+.cp-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-ping,
+  .animate-spin,
+  .cp-progress-bar {
+    animation: none !important;
+  }
 }
