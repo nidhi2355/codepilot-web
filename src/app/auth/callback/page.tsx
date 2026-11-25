@@ -14,7 +14,9 @@ function OAuthCallbackHandler() {
   const oauthError =
     searchParams.get("error_description") || searchParams.get("error");
   const code = searchParams.get("code");
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "")
+    .trim()
+    .replace(/\/+$/, "");
 
   const validationError = oauthError
     ? oauthError
@@ -42,7 +44,9 @@ function OAuthCallbackHandler() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(
-            data.message || data.detail || `Authentication failed (${res.status})`
+            data.message ||
+              data.detail ||
+              `Authentication failed (${res.status})`
           );
         }
 
@@ -57,32 +61,41 @@ function OAuthCallbackHandler() {
   }, [validationError, code, apiUrl, router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-zinc-100">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-xl">
+    <main className="cp-grid-bg flex min-h-screen items-center justify-center bg-[var(--bg)] px-6 text-[var(--text)]">
+      <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-8 text-center">
         {error ? (
           <div className="space-y-4">
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-red-500/40 bg-red-950/50 text-red-300">
+            <div
+              style={{
+                backgroundColor: "var(--danger-tint)",
+                borderColor: "var(--danger-border)",
+                color: "var(--danger)",
+              }}
+              className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border font-bold"
+            >
               !
             </div>
-            <h1 className="text-lg font-semibold text-zinc-100">
+            <h1 className="text-lg font-semibold text-[var(--text)]">
               GitHub Sign-In Failed
             </h1>
-            <p className="text-xs leading-relaxed text-red-300">{error}</p>
+            <p className="text-xs leading-relaxed text-[var(--danger)]">
+              {error}
+            </p>
             <button
               type="button"
               onClick={() => router.replace("/")}
-              className="mt-2 w-full rounded-lg bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200"
+              className="mt-2 w-full rounded-lg bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-[#0B0E14] transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
             >
               Back to CodePilot
             </button>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-emerald-400" />
-            <h1 className="text-base font-semibold text-zinc-100">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--brand)]" />
+            <h1 className="text-base font-semibold text-[var(--text)]">
               Completing GitHub Sign-In…
             </h1>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-[var(--text-muted)]">
               Verifying your GitHub account and securing your workspace session.
             </p>
           </div>
@@ -96,7 +109,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400 text-sm">
+        <main className="flex min-h-screen items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-muted)]">
           Loading authentication…
         </main>
       }
