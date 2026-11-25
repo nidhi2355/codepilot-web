@@ -652,16 +652,50 @@ export default function AgentWorkspace() {
 
         {state.errors.length > 0 && (
           <section className="rounded-2xl border border-red-900/70 bg-red-950/30 p-5 backdrop-blur-md">
-            <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-red-400">
-              Errors &amp; Reflection
-            </h2>
-            <ul className="space-y-1.5 text-xs text-red-200">
-              {state.errors.map((err, i) => (
-                <li key={i} className="whitespace-pre-wrap font-mono">
-                  {err}
-                </li>
-              ))}
-            </ul>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-red-400">
+                Errors &amp; Reflection
+              </h2>
+              <span className="font-mono text-[11px] text-red-300/70">
+                {Array.from(new Set(state.errors)).length} event(s)
+              </span>
+            </div>
+            <div className="space-y-2.5">
+              {Array.from(new Set(state.errors)).map((rawErr, i) => {
+                const match = rawErr.match(
+                  /^(Coding Error|Testing Error|PR Creation Error|Reflection Error|Retry \d+ (?:Guidance|Diagnosis|Feedback)):\s*([\s\S]*)$/
+                );
+                const label = match ? match[1] : "Agent Log";
+                const body = (match ? match[2] : rawErr).trim();
+                const isGuidance = label.startsWith("Retry ");
+
+                return (
+                  <div
+                    key={i}
+                    className={`rounded-xl border px-3.5 py-2.5 text-xs ${
+                      isGuidance
+                        ? "border-amber-500/30 bg-amber-950/30 text-amber-200"
+                        : "border-red-900/60 bg-zinc-950/70 text-red-200"
+                    }`}
+                  >
+                    <div className="mb-1 flex items-center gap-2">
+                      <span
+                        className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider ${
+                          isGuidance
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-red-500/20 text-red-300"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap font-mono leading-relaxed">
+                      {body}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </section>
         )}
 
